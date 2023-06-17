@@ -82,13 +82,13 @@ const deletePreviousGitHubRelease = async (client: github.GitHub, releaseInfo: O
 const generateNewGitHubRelease = async (
   client: github.GitHub,
   releaseInfo: Octokit.ReposCreateReleaseParams,
-): Promise<string> => {
+): Promise<{upload_url:string, id:url}> => {
   core.startGroup(`Generating new GitHub release for the "${releaseInfo.tag_name}" tag`);
 
   core.info('Creating new release');
   const resp = await client.repos.createRelease(releaseInfo);
   core.endGroup();
-  return resp.data.upload_url;
+  return {resp.data.upload_url, resp.data.id};
 };
 
 const searchForPreviousReleaseTag = async (
@@ -302,7 +302,7 @@ export const main = async (): Promise<void> => {
       });
     }
 
-    const releaseUploadUrl = await generateNewGitHubRelease(client, {
+    const {releaseUploadUrl, id} = await generateNewGitHubRelease(client, {
       owner: context.repo.owner,
       repo: context.repo.repo,
       tag_name: releaseTag,
@@ -318,6 +318,7 @@ export const main = async (): Promise<void> => {
     core.exportVariable('AUTOMATIC_RELEASES_TAG', releaseTag);
     core.setOutput('automatic_releases_tag', releaseTag);
     core.setOutput('upload_url', releaseUploadUrl);
+    core.setOutput('release_id', id);
   } catch (error) {
     core.setFailed(error.message);
     throw error;
